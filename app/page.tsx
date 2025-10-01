@@ -1,103 +1,134 @@
-import Image from "next/image";
+"use client"
+
+import type React from "react"
+
+import { useState } from "react"
+import { Download, Loader2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { ChainSelector, SUPPORTED_CHAINS, type Chain } from "@/components/chain-selector"
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [contracts, setContracts] = useState("")
+  const [selectedChain, setSelectedChain] = useState<Chain>(SUPPORTED_CHAINS[0])
+  const [loading, setLoading] = useState(false)
+  const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null)
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!contracts.trim()) {
+      setStatus({ type: "error", message: "Please enter at least one contract address" })
+      return
+    }
+
+    setLoading(true)
+    setStatus(null)
+
+    try {
+      // Split by comma and trim whitespace
+      const contractList = contracts
+        .split(",")
+        .map((c) => c.trim())
+        .filter((c) => c)
+
+      // Simulate download process
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+
+      setStatus({
+        type: "success",
+        message: `Processing ${contractList.length} contract${contractList.length > 1 ? "s" : ""} on ${selectedChain.name}...`,
+      })
+
+      // Here you would implement actual contract downloading logic
+      console.log("Downloading contracts:", contractList)
+      console.log("Chain:", selectedChain.name)
+      console.log("Explorer API:", selectedChain.explorer)
+    } catch (error) {
+      setStatus({ type: "error", message: "Failed to download contracts" })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <main className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden">
+      {/* Background grid effect */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#0a0a0a_1px,transparent_1px),linear-gradient(to_bottom,#0a0a0a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)]" />
+
+      <div className="relative z-10 w-full max-w-3xl space-y-8">
+        {/* Header */}
+        <div className="text-center space-y-4">
+          <div className="inline-block">
+            <h1 className="text-6xl font-bold bg-gradient-to-r from-purple-500 via-purple-400 to-cyan-400 bg-clip-text text-transparent font-mono">
+              cdown
+            </h1>
+          </div>
+          <p className="text-muted-foreground text-lg">Download smart contract source code</p>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+
+        {/* Main form */}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="flex gap-3 items-center">
+            <div className="relative group flex-1">
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600 to-cyan-600 rounded-lg blur opacity-30 group-hover:opacity-50 transition duration-300" />
+              <div className="relative">
+                <Input
+                  type="text"
+                  placeholder="0x... (comma-separated for multiple)"
+                  value={contracts}
+                  onChange={(e) => setContracts(e.target.value)}
+                  className="h-14 bg-card border-border text-foreground placeholder:text-muted-foreground font-mono text-sm px-6"
+                  disabled={loading}
+                />
+              </div>
+            </div>
+
+            <ChainSelector selectedChain={selectedChain} onChainChange={setSelectedChain} disabled={loading} />
+          </div>
+
+          <Button
+            type="submit"
+            disabled={loading}
+            className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                <Download className="mr-2 h-5 w-5" />
+                Download
+              </>
+            )}
+          </Button>
+        </form>
+
+        {/* Status message */}
+        {status && (
+          <div
+            className={`p-4 rounded-lg border text-center font-mono text-sm ${
+              status.type === "success"
+                ? "bg-primary/10 border-primary/30 text-primary"
+                : "bg-red-500/10 border-red-500/30 text-red-400"
+            }`}
+          >
+            {status.message}
+          </div>
+        )}
+
+        {/* Info text */}
+        <div className="text-center text-muted-foreground text-sm space-y-2">
+          <p>Enter contract addresses separated by commas</p>
+          <p className="font-mono text-xs">Example: 0xabc..., 0xdef..., 0x123...</p>
+        </div>
+      </div>
+
+      {/* Corner accent */}
+      <div className="absolute top-0 right-0 w-96 h-96 bg-purple-600/20 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-96 h-96 bg-cyan-600/20 rounded-full blur-[120px] pointer-events-none" />
+    </main>
+  )
 }
