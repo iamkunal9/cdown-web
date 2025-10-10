@@ -1,18 +1,21 @@
 "use client"
 
 import type React from "react"
-
+import { Checkbox } from "@/components/ui/checkbox"
 import { useState } from "react"
-import { Download, Loader2 } from "lucide-react"
+import { Download, Loader2, FileText, Braces } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ChainSelector, SUPPORTED_CHAINS, type Chain } from "@/components/chain-selector"
+import { cn } from "@/lib/utils"
 
 export default function Home() {
   const [contracts, setContracts] = useState("")
   const [selectedChain, setSelectedChain] = useState<Chain>(SUPPORTED_CHAINS[0])
   const [loading, setLoading] = useState(false)
   const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null)
+  const [includeMetadata, setIncludeMetadata] = useState(false)
+  const [includeAbi, setIncludeAbi] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -26,26 +29,41 @@ export default function Home() {
     setStatus(null)
 
     try {
-      // Split by comma and trim whitespace
-      const contractList = contracts
-        .split(",")
-        .map((c) => c.trim())
-        .filter((c) => c)
+      const response = await fetch("/api/download", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          addresses: contracts,
+          chainId: selectedChain.chainId,
+          includeMetadata,
+          includeAbi,
+        }),
+      })
 
-      // Simulate download process
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }))
+        throw new Error(errorData.error || "Failed to download contracts")
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `contracts-${selectedChain.chainId}.zip`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
 
       setStatus({
         type: "success",
-        message: `Processing ${contractList.length} contract${contractList.length > 1 ? "s" : ""} on ${selectedChain.name}...`,
+        message: `Downloading contracts for ${selectedChain.name}...`,
       })
-
-      // Here you would implement actual contract downloading logic
-      console.log("Downloading contracts:", contractList)
-      console.log("Chain:", selectedChain.name)
-      console.log("Explorer API:", selectedChain.explorer)
     } catch (error) {
-      setStatus({ type: "error", message: "Failed to download contracts" })
+      const errorMessage = error instanceof Error ? error.message : "Failed to download contracts"
+      setStatus({ type: "error", message: errorMessage })
     } finally {
       setLoading(false)
     }
@@ -85,6 +103,53 @@ export default function Home() {
             </div>
 
             <ChainSelector selectedChain={selectedChain} onChainChange={setSelectedChain} disabled={loading} />
+          </div>
+
+          {/* Replace plain checkboxes with sleek option chips */}
+          <div className="flex gap-3">
+            <label
+              htmlFor="include-metadata"
+              className={cn(
+                "flex-1 cursor-pointer rounded-lg border px-3 py-3",
+                "flex items-center justify-center gap-2 text-sm transition-colors",
+                includeMetadata
+                  ? "border-primary/40 bg-primary/10 text-primary"
+                  : "border-border bg-card hover:bg-card/80 text-foreground",
+              )}
+              aria-disabled={loading}
+            >
+              <Checkbox
+                id="include-metadata"
+                checked={includeMetadata}
+                onCheckedChange={(v: boolean) => setIncludeMetadata(!!v)}
+                disabled={loading}
+                className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+              />
+              <FileText className="h-4 w-4" />
+              <span className="select-none">Metadata</span>
+            </label>
+
+            <label
+              htmlFor="include-abi"
+              className={cn(
+                "flex-1 cursor-pointer rounded-lg border px-3 py-3",
+                "flex items-center justify-center gap-2 text-sm transition-colors",
+                includeAbi
+                  ? "border-primary/40 bg-primary/10 text-primary"
+                  : "border-border bg-card hover:bg-card/80 text-foreground",
+              )}
+              aria-disabled={loading}
+            >
+              <Checkbox
+                id="include-abi"
+                checked={includeAbi}
+                onCheckedChange={(v: boolean) => setIncludeAbi(!!v)}
+                disabled={loading}
+                className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+              />
+              <Braces className="h-4 w-4" />
+              <span className="select-none">ABI</span>
+            </label>
           </div>
 
           <Button
@@ -129,6 +194,17 @@ export default function Home() {
       {/* Corner accent */}
       <div className="absolute top-0 right-0 w-96 h-96 bg-purple-600/20 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-cyan-600/20 rounded-full blur-[120px] pointer-events-none" />
+      <footer className="absolute inset-x-0 bottom-4 z-10 text-center text-xs text-muted-foreground">
+        {"made with love by "}
+        <a
+          href="https://iamkunal9.in"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline decoration-muted-foreground/50 underline-offset-4 hover:text-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-primary rounded-sm"
+        >
+          {"iamkunal9"}
+        </a>
+      </footer>
     </main>
   )
 }
