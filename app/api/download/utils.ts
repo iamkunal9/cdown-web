@@ -111,21 +111,31 @@ export function filterMetadata(
 const API_URL = "https://api.etherscan.io/v2/api"
 const RATE_LIMIT_WINDOW_MS = 1_000
 const RATE_LIMIT_MAX_REQUESTS = 3
+const MIN_SPACING_MS = Math.ceil(RATE_LIMIT_WINDOW_MS / RATE_LIMIT_MAX_REQUESTS) + 20
 
 // Simple in-memory rate limiter to respect Etherscan's 3 req/sec cap
 let requestTimestamps: number[] = []
+let nextAvailableAt = 0
 async function enforceRateLimit(): Promise<void> {
   while (true) {
     const now = Date.now()
     requestTimestamps = requestTimestamps.filter((ts) => now - ts < RATE_LIMIT_WINDOW_MS)
 
-    if (requestTimestamps.length < RATE_LIMIT_MAX_REQUESTS) {
-      requestTimestamps.push(now)
-      return
+    const windowDelay =
+      requestTimestamps.length >= RATE_LIMIT_MAX_REQUESTS
+        ? RATE_LIMIT_WINDOW_MS - (now - requestTimestamps[0])
+        : 0
+    const spacingDelay = Math.max(0, nextAvailableAt - now)
+    const waitTime = Math.max(windowDelay, spacingDelay)
+
+    if (waitTime > 0) {
+      await new Promise((resolve) => setTimeout(resolve, waitTime))
+      continue
     }
 
-    const waitTime = RATE_LIMIT_WINDOW_MS - (now - requestTimestamps[0])
-    await new Promise((resolve) => setTimeout(resolve, waitTime))
+    requestTimestamps.push(Date.now())
+    nextAvailableAt = Date.now() + MIN_SPACING_MS
+    return
   }
 }
 
