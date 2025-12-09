@@ -109,12 +109,33 @@ export function filterMetadata(
 }
 
 const API_URL = "https://api.etherscan.io/v2/api"
+const RATE_LIMIT_WINDOW_MS = 1_000
+const RATE_LIMIT_MAX_REQUESTS = 3
+
+// Simple in-memory rate limiter to respect Etherscan's 3 req/sec cap
+let requestTimestamps: number[] = []
+async function enforceRateLimit(): Promise<void> {
+  while (true) {
+    const now = Date.now()
+    requestTimestamps = requestTimestamps.filter((ts) => now - ts < RATE_LIMIT_WINDOW_MS)
+
+    if (requestTimestamps.length < RATE_LIMIT_MAX_REQUESTS) {
+      requestTimestamps.push(now)
+      return
+    }
+
+    const waitTime = RATE_LIMIT_WINDOW_MS - (now - requestTimestamps[0])
+    await new Promise((resolve) => setTimeout(resolve, waitTime))
+  }
+}
 
 export async function fetchSource(
   address: string,
   chainId: number,
   apiKey: string,
 ): Promise<SourceResult> {
+  await enforceRateLimit()
+
   const url = `${API_URL}?chainid=${chainId}&module=contract&action=getsourcecode&address=${address}&apikey=${apiKey}`
 
   const response = await fetch(url, { signal: AbortSignal.timeout(15_000) })
