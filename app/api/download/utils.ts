@@ -139,28 +139,44 @@ async function enforceRateLimit(): Promise<void> {
   }
 }
 
+const RATE_LIMIT_MAX_RETRIES = 5
+const RATE_LIMIT_RETRY_BACKOFF_MS = 500
+
+function isRateLimitMessage(message: unknown): boolean {
+  return typeof message === "string" && /rate limit/i.test(message)
+}
+
 export async function fetchSource(
   address: string,
   chainId: number,
   apiKey: string,
 ): Promise<SourceResult> {
-  await enforceRateLimit()
-
   const url = `${API_URL}?chainid=${chainId}&module=contract&action=getsourcecode&address=${address}&apikey=${apiKey}`
 
-  const response = await fetch(url, { signal: AbortSignal.timeout(15_000) })
+  for (let attempt = 0; ; attempt++) {
+    await enforceRateLimit()
 
-  if (!response.ok) {
-    throw new Error(`HTTP request failed with status ${response.status}`)
+    const response = await fetch(url, { signal: AbortSignal.timeout(15_000) })
+
+    if (!response.ok) {
+      throw new Error(`HTTP request failed with status ${response.status}`)
+    }
+
+    const data = (await response.json()) as { status?: string; message?: string; result?: unknown }
+
+    if (data.status !== "1" || !Array.isArray(data.result) || data.result.length === 0) {
+      const rateLimited = isRateLimitMessage(data.message) || isRateLimitMessage(data.result)
+
+      if (rateLimited && attempt < RATE_LIMIT_MAX_RETRIES) {
+        await new Promise((resolve) => setTimeout(resolve, RATE_LIMIT_RETRY_BACKOFF_MS * (attempt + 1)))
+        continue
+      }
+
+      throw new Error(`Etherscan error for ${address}: ${JSON.stringify(data.result)}`)
+    }
+
+    return data.result[0] as SourceResult
   }
-
-  const data = (await response.json()) as { status?: string; result?: unknown }
-
-  if (data.status !== "1" || !Array.isArray(data.result) || data.result.length === 0) {
-    throw new Error(`Etherscan error for ${address}: ${JSON.stringify(data.result)}`)
-  }
-
-  return data.result[0] as SourceResult
 }
 
 export async function downloadContractSourceRecursive(
