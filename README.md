@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# cdown
 
-## Getting Started
+Download verified smart-contract **source code** (and optional ABI / metadata) from Etherscan-compatible explorers as a ZIP.
 
-First, run the development server:
+**Live:** [https://cdown.iamkunal9.in](https://cdown.iamkunal9.in)
+
+## What it does
+
+- Paste one or more contract addresses
+- Pick a chain (Ethereum, L2s, testnets, etc.)
+- Optionally include ABI and/or explorer metadata
+- Downloads a ZIP of the verified source (follows proxy → implementation when present)
+
+The browser talks to a Next.js API route; that route calls the [Etherscan API](https://docs.etherscan.io/) with your API key. The key never ships to the client.
+
+## Stack
+
+- Next.js (App Router) + React 19 + TypeScript + Tailwind
+- Server route: `app/api/download`
+- Deployed on Netlify/Vercel-style Node hosting (live at `cdown.iamkunal9.in`)
+
+## Prerequisites
+
+- Node 20+ (or [Bun](https://bun.sh))
+- A free [Etherscan API key](https://etherscan.io/apis) (V2 multi-chain key works across supported explorers)
+
+## Local development
 
 ```bash
+cp .env.example .env.local
+# set ETHERSCAN_API_KEY=your_key
+
+npm install   # or: bun install / pnpm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run build
+npm start
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Environment
 
-## Learn More
+| Variable | Required | Description |
+|---|---|---|
+| `ETHERSCAN_API_KEY` | Yes (server) | Etherscan API key for `getsourcecode` |
 
-To learn more about Next.js, take a look at the following resources:
+Never commit `.env` / `.env.local`. Use your host’s secret store in production (Vercel/Netlify env vars).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Deploy
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Push this repo to GitHub
+2. Import the project on Vercel or Netlify
+3. Set `ETHERSCAN_API_KEY` in the project environment
+4. Point a custom domain (e.g. `cdown.yourdomain.com`) if you want
 
-## Deploy on Vercel
+## Security / privacy notes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- No wallets, no private keys, no user accounts
+- Only public verified source from explorers is fetched
+- Rate limiting is applied server-side to stay within Etherscan limits
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## License
+
+MIT — see [LICENSE.md](./LICENSE.md).
